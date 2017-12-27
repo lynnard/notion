@@ -1,7 +1,7 @@
 /*
  * ion/ioncore/float-placement.c
  *
- * Copyright (c) Tuomo Valkonen 1999-2009. 
+ * Copyright (c) Tuomo Valkonen 1999-2009.
  *
  * See the included file LICENSE for details.
  */
@@ -9,6 +9,8 @@
 #include <string.h>
 
 #include "common.h"
+#include "rootwin.h"
+#include "xwindow.h"
 #include "group.h"
 #include "float-placement.h"
 
@@ -35,9 +37,9 @@ static void ggeom(WRegion *reg, WRectangle *geom)
 static bool st_filt(WStacking *st, void *lvl)
 {
     uint level=*(uint*)lvl;
-    
-    return (st->reg!=NULL && 
-            REGION_IS_MAPPED(st->reg) && 
+
+    return (st->reg!=NULL &&
+            REGION_IS_MAPPED(st->reg) &&
             st->level==level);
 }
 
@@ -58,10 +60,10 @@ static WRegion* is_occupied(WGroup *ws, uint level, const WRectangle *r)
     WStackingIterTmp tmp;
     WStacking *st;
     WRectangle p;
-    
+
     FOR_ALL_STACKING_NODES(st, ws, level, tmp){
         ggeom(st->reg, &p);
-        
+
         if(r->x>=p.x+p.w)
             continue;
         if(r->y>=p.y+p.h)
@@ -72,7 +74,7 @@ static WRegion* is_occupied(WGroup *ws, uint level, const WRectangle *r)
             continue;
         return st->reg;
     }
-    
+
     return NULL;
 }
 
@@ -83,14 +85,14 @@ static int next_least_x(WGroup *ws, uint level, int x)
     int retx=REGION_GEOM(ws).x+REGION_GEOM(ws).w;
     WStackingIterTmp tmp;
     WStacking *st;
-    
+
     FOR_ALL_STACKING_NODES(st, ws, level, tmp){
         ggeom(st->reg, &p);
-        
+
         if(p.x+p.w>x && p.x+p.w<retx)
             retx=p.x+p.w;
     }
-    
+
     return retx;
 }
 
@@ -102,14 +104,14 @@ static int next_least_y(WGroup *ws, uint level, int y)
     int rety=REGION_GEOM(ws).y+REGION_GEOM(ws).h;
     WStackingIterTmp tmp;
     WStacking *st;
-    
+
     FOR_ALL_STACKING_NODES(st, ws, level, tmp){
         ggeom(st->reg, &p);
-        
+
         if(p.y+p.h>y && p.y+p.h<rety)
             rety=p.y+p.h;
     }
-    
+
     return rety;
 }
 
@@ -119,14 +121,14 @@ static bool tiling_placement(WGroup *ws, uint level, WRectangle *g)
     WRegion *p;
     WRectangle r, r2;
     int maxx, maxy;
-    
+
     r=REGION_GEOM(ws);
     r.w=g->w;
     r.h=g->h;
 
     maxx=REGION_GEOM(ws).x+REGION_GEOM(ws).w;
     maxy=REGION_GEOM(ws).y+REGION_GEOM(ws).h;
-    
+
     if(ioncore_placement_method==PLACEMENT_UDLR){
         while(r.x<maxx){
             p=is_occupied(ws, level, &r);
@@ -167,10 +169,28 @@ static bool tiling_placement(WGroup *ws, uint level, WRectangle *g)
 
 }
 
+static bool pointer_placement(WGroup *ws, WRectangle *g)
+{
+    WRootWin *rootwin=region_rootwin_of((WRegion*)ws);
+    int px=0, py=0;
+
+    if(xwindow_pointer_pos(WROOTWIN_ROOT(rootwin), &px, &py)){
+        const WRectangle r=REGION_GEOM(ws);
+        g->x=px-(g->w/2);
+        g->y=py-(g->h/2);
+        rectangle_clamp_or_center(g, &r);
+        return TRUE;
+    }
+    return FALSE;
+}
+
 
 void group_calc_placement(WGroup *ws, uint level, WRectangle *geom)
 {
-    if(ioncore_placement_method!=PLACEMENT_RANDOM){
+    if(ioncore_placement_method==PLACEMENT_POINTER){
+        if(pointer_placement(ws, geom))
+            return;
+    }else if(ioncore_placement_method!=PLACEMENT_RANDOM){
         if(tiling_placement(ws, level, geom))
             return;
     }

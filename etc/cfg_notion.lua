@@ -42,6 +42,19 @@ ioncore.set{
     -- changing focus. Enabled by default.
     --warp=true,
 
+    -- Margin to use when warping the cursor (in pixels),
+    -- to inset from the edge of the frame.
+    --warp_margin=5,
+
+    -- Placement to use when positioning the cursor in the frame
+    -- (as a factor from 0-1).
+    -- Where an x,y value:
+    -- * (0.0, 0.0) for top-left.
+    -- * (1.0, 1.0) for bottom-right.
+    -- * (0.5, 0.5) for the center of the frame.
+    --warp_factor_x=0.0,
+    --warp_factor_y=0.0,
+
     -- Switch frames to display newly mapped windows.
     --switchto=true,
 
@@ -52,6 +65,14 @@ ioncore.set{
 
     -- Auto-unsqueeze transients/menus/queries.
     --unsqueeze=true,
+
+    -- Float window placement method:
+    -- one of 'udlr' (up down left right), 'lrud' (left right up down), 'pointer' or 'random'.
+    --float_placement_method="udlr"
+
+    -- Float non-transient dialog type windows.
+    -- Can be useful for applications that try to place their own dialog windows.
+    --window_dialog_float=true,
 
     -- Display notification tooltips for activity on hidden workspace.
     --screen_notify=true,

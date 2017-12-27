@@ -1,7 +1,7 @@
 /*
  * ion/ioncore/rectangle.c
  *
- * Copyright (c) Tuomo Valkonen 1999-2009. 
+ * Copyright (c) Tuomo Valkonen 1999-2009.
  *
  * See the included file LICENSE for details.
  */
@@ -16,13 +16,31 @@
 void rectangle_constrain(WRectangle *g, const WRectangle *bounds)
 {
     const WRectangle tmpg=*g;
-    
+
     g->x=MINOF(MAXOF(tmpg.x, bounds->x), tmpg.x+tmpg.w-1);
     g->y=MINOF(MAXOF(tmpg.y, bounds->y), tmpg.y+tmpg.h-1);
     g->w=MAXOF(1, MINOF(bounds->x+bounds->w, tmpg.x+tmpg.w)-g->x);
     g->h=MAXOF(1, MINOF(bounds->y+bounds->h, tmpg.y+tmpg.h)-g->y);
 }
 
+void rectangle_clamp_or_center(WRectangle *g, const WRectangle *bounds)
+{
+    if(g->w>bounds->w){
+        g->x=(bounds->x+(bounds->w/2))-(g->w/2);
+    }else if(g->x<bounds->x){
+        g->x=bounds->x;
+    }else if(g->x+g->w>bounds->x+bounds->w){
+        g->x=(bounds->x+bounds->w)-g->w;
+    }
+
+    if(g->h>bounds->h){
+        g->y=(bounds->y+(bounds->h/2))-(g->h/2);
+    }else if(g->y<bounds->y){
+        g->y=bounds->y;
+    }else if(g->y+g->h>bounds->y+bounds->h){
+        g->y=(bounds->y+bounds->h)-g->h;
+    }
+}
 
 bool rectangle_contains(const WRectangle *g, int x, int y)
 {

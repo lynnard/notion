@@ -90,7 +90,7 @@ extern ExtlTab extl_ref_table(ExtlTab ref);
 extern ExtlTab extl_create_table();
 
 /* Table/get */
-extern bool extl_table_get_vararg(ExtlTab ref, char itype, char type, 
+extern bool extl_table_get_vararg(ExtlTab ref, char itype, char type,
                                   va_list *args);
 extern bool extl_table_get(ExtlTab ref, char itype, char type, ...);
 
@@ -114,7 +114,7 @@ extern bool extl_table_geti_f(ExtlTab ref, int entry, ExtlFn *ret);
 extern bool extl_table_geti_t(ExtlTab ref, int entry, ExtlTab *ret);
 
 /* Table/set */
-extern bool extl_table_set_vararg(ExtlTab ref, char itype, char type, 
+extern bool extl_table_set_vararg(ExtlTab ref, char itype, char type,
                                   va_list *args);
 extern bool extl_table_set(ExtlTab ref, char itype, char type, ...);
 
@@ -190,8 +190,8 @@ enum ExtlHookEvent {
 
 typedef void (*ExtlHook) (const enum ExtlHookEvent event, const char *name, const char *source, int currentline);
 
-int extl_sethook(ExtlHook hook);
-int extl_resethook();
+void extl_sethook(ExtlHook hook);
+void extl_resethook();
 
 /* Misc. */
 

@@ -1,6 +1,6 @@
 --
 -- ion/ioncore/ioncore_menudb.lua -- Routines for defining menus.
--- 
+--
 -- Copyright (c) Tuomo Valkonen 2004-2009.
 --
 -- See the included file LICENSE for details.
@@ -16,8 +16,8 @@ local menus={}
 -- Menu construction {{{
 
 --DOC
--- Define a new menu with \var{name} being the menu's name and \var{tab} 
--- being a table of menu entries. If \var{tab.append} is set, the entries 
+-- Define a new menu with \var{name} being the menu's name and \var{tab}
+-- being a table of menu entries. If \var{tab.append} is set, the entries
 -- are appended to previously-defined ones, if possible.
 function ioncore.defmenu(name, tab)
     if menus[name] and type(tab)=="table" and tab.append then
@@ -41,7 +41,7 @@ function ioncore.getmenu(name)
 end
 
 --DOC
--- Define context menu for context \var{ctx}, \var{tab} being a table 
+-- Define context menu for context \var{ctx}, \var{tab} being a table
 -- of menu entries.
 function ioncore.defctxmenu(ctx, ...)
     local tab, add
@@ -72,7 +72,7 @@ function ioncore.evalmenu(menu, ...)
 end
 
 --DOC
--- Use this function to define normal menu entries. The string \var{name} 
+-- Use this function to define normal menu entries. The string \var{name}
 -- is the string shown in the visual representation of menu. The
 -- parameter \var{cmd} and \var{guard_or_opts} (when string) are similar
 -- to those of \fnref{ioncore.defbindings}.  If \var{guard_or_opts} is
@@ -83,20 +83,20 @@ end
 function ioncore.menuentry(name, cmd, guard_or_opts)
     local guard
     local opts
-    
+
     if type(guard_or_opts)=="string" then
         guard=guard_or_opts
     elseif type(guard_or_opts)=="table" then
         opts=guard_or_opts
         guard=opts.guard
     end
-    
+
     local fn, gfn=ioncore.compile_cmd(cmd, guard)
     if fn then
         return table.append({
-                   name=ioncore.gettext(name), 
-                   func=fn, 
-                   guard_func=gfn, 
+                   name=ioncore.gettext(name),
+                   func=fn,
+                   guard_func=gfn,
                }, opts or {})
     end
 end
@@ -106,7 +106,7 @@ end
 -- Use this function to define menu entries for submenus. The parameter
 -- \fnref{sub_or_name} is either a table of menu entries or the name
 -- of an already defined menu. The initial menu entry to highlight can be
--- specified by \var{options.initial} as either an integer starting from 1, 
+-- specified by \var{options.initial} as either an integer starting from 1,
 -- or a  function that returns such a number. Another option supported is
 -- \var{options.noautoexpand} that will cause \fnref{mod_query.query_menu}
 -- to not automatically expand this submenu.
@@ -133,7 +133,7 @@ local function addto(list)
         return true
     end
 end
-    
+
 local function sort(entries)
     table.sort(entries, function(a, b) return a.name < b.name end)
     return entries
@@ -148,14 +148,14 @@ end
 function menus.workspacelist()
     local entries={}
     local iter_=addto(entries)
-    
-    local function iter(obj) 
-        return (not obj_is(obj, "WGroupWS") 
+
+    local function iter(obj)
+        return (not obj_is(obj, "WGroupWS")
                 or iter_(obj))
     end
-    
+
     ioncore.region_i(iter)
-    
+
     return sort(entries)
 end
 
@@ -163,39 +163,131 @@ local function focuslist(do_act)
     local entries={}
     local seen={}
     local iter_=addto(entries)
-    
-    local function iter(obj, attr) 
+
+    local function iter(obj, attr)
         if obj_is(obj, "WClientWin") then
             iter_(obj, attr)
             seen[obj]=true
         end
         return true
     end
-    
+
     local function iter_act(obj)
         return iter(obj, "activity")
     end
-    
+
     local function iter_foc(obj)
         return (seen[obj] or iter(obj))
     end
-    
+
     if do_act then
         -- Windows with activity first
         ioncore.activity_i(iter_act)
     end
-    
+
     -- The ones that have been focused in their lifetime
     ioncore.focushistory_i(iter_foc)
-    
+
     -- And then the rest
     ioncore.clientwin_i(iter_foc)
-    
+
     return entries
 end
 
 menus.focuslist=function() return focuslist(true) end
 menus.focuslist_=function() return focuslist(false) end
+
+local function ws_or_fullscreen_of(reg)
+    local ws=ioncore.find_manager(reg, "WGroupWS")
+    local is_scratch=false
+
+    if not ws then
+        -- Fullscreen windows doesn't have a WGroupWS manager
+        -- but are the child of Screen
+        ws=obj_is(reg:parent(), "WScreen") and reg
+        -- Scratchpads can be a frame
+        local frame=ioncore.find_manager(reg, "WFrame")
+        is_scratch=mod_sp and frame and mod_sp.is_scratchpad(frame)
+    else
+        -- Or a ws
+        is_scratch=mod_sp and mod_sp.is_scratchpad(ws)
+    end
+
+    if not ws or is_scratch then
+        -- Ignore scratchpads
+        return false
+    else
+        return ws
+    end
+end
+
+function menus.workspacefocuslist()
+    local entries={}
+    local seen={}
+    local iter_=addto(entries)
+    local focused_ws=ws_or_fullscreen_of(ioncore.current())
+    -- Ignore the currently focused workspace
+    if focused_ws then
+        seen[focused_ws]=true
+    end
+
+    local function iter(reg)
+        local ws=ws_or_fullscreen_of(reg)
+
+        -- If we started in a scratchpad consider the first visited
+        -- workspace as the one we started in and ignore it
+        if not focused_ws and ws then
+            focused_ws=ws
+            seen[ws]=true
+        end
+
+        if ws and not seen[ws] then
+            iter_(ws)
+            seen[ws]=true
+        end
+        return true
+    end
+
+    -- Add workspaces which have had focus
+    ioncore.focushistory_i(iter)
+
+    -- Add the rest
+    ioncore.region_i(iter, "WGroupWS")
+
+    -- Add create workspace entry
+    local create_ws=menuentry(" -- Create new workspace -- ",
+                              "mod_query.query_workspace(_)")
+    table.insert(entries, create_ws)
+
+    return entries
+end
+
+--DOC
+-- Go to and return to a previously active workspace (if any).
+--
+-- Note that this function is asynchronous; the region will not
+-- actually have received the focus when this function returns.
+function ioncore.goto_previous_workspace()
+    local ws
+    local focused_ws=ws_or_fullscreen_of(ioncore.current())
+
+    local function iter(reg)
+        ws=ws_or_fullscreen_of(reg)
+
+        if ws and not (ws==focused_ws) then
+            return false
+        end
+        return true
+    end
+
+    -- Add workspaces which have had focus
+    ioncore.focushistory_i(iter)
+
+    if ws then
+        ws:goto_focus()
+    end
+    return ws
+end
 
 -- }}}
 
@@ -231,24 +323,24 @@ local function selectstyle(look, where)
         end
         return
     end
-    
+
     where=mplex_of(where)
-    if not where then 
-        return 
+    if not where then
+        return
     end
-    
+
     if not fname then
         query_message(where, TR("Cannot save selection."))
         return
     end
-    
+
     mod_query.query_yesno(where, TR("Save look selection in %s?", fname),
                           writeit)
 end
 
 local function receive_styles(str)
     local data=""
-    
+
     while str do
         data=data .. str
         if string.len(data)>ioncore.RESULT_DATA_LIMIT then
@@ -256,31 +348,31 @@ local function receive_styles(str)
         end
         str=coroutine.yield()
     end
-    
+
     local found={}
     local styles={}
     local stylemenu={}
-    
+
     for look in string.gmatch(data, "(look[-_][^\n]*)%.lua\n") do
         if not found[look] then
             found[look]=true
             table.insert(styles, look)
         end
     end
-    
+
     table.sort(styles)
-    
+
     for _, look in ipairs(styles) do
         local look_=look
-        table.insert(stylemenu, menuentry(look,  
+        table.insert(stylemenu, menuentry(look,
                                           function(where)
                                               selectstyle(look_, where)
                                           end))
     end
-    
+
     table.insert(stylemenu, menuentry(TR("Refresh list"),
                                       ioncore.refresh_stylelist))
-    
+
     menus.stylemenu=stylemenu
 end
 
@@ -302,7 +394,7 @@ function ioncore.refresh_stylelist()
         end
 
         cmd=cmd..string.gsub(path..":", "([^:]*):", mkarg)
-        
+
         ioncore.popen_bgread(cmd, coroutine.wrap(receive_styles))
     end
 end
@@ -328,49 +420,49 @@ local function modeparts(mode)
     if not mode then
         return function() return end
     end
-    
+
     local f, s, v=string.gmatch(mode, "(%-?[^-]+)");
-    
+
     local function nxt(_, m)
         v = f(s, v)
         return (v and (m .. v))
     end
-    
+
     return nxt, nil, ""
 end
 
 
 local function get_ctxmenu(reg, sub)
     local m={}
-    
+
     local function cp(m2)
         local m3={}
         for k, v in ipairs(m2) do
             local v2=table.copy(v)
-            
+
             if v2.func then
                 local ofunc=v2.func
                 v2.func=function() return ofunc(reg, sub) end
             end
-            
+
             if v2.submenu_fn then
                 local ofn=v2.submenu_fn
                 v2.submenu_fn=function() return cp(ofn()) end
             end
-            
+
             m3[k]=v2
         end
         m3.label=m2.label
         return m3
     end
-    
+
     local function add_ctxmenu(m2, use_label)
         if m2 then
             m=table.icat(m, cp(m2))
             m.label=(use_label and m2.label) or m.label
         end
     end
-    
+
     local mgr=reg:manager()
     local mgrname=(mgr and mgr:name()) or nil
     local mode=(reg.mode and reg:mode())
@@ -391,25 +483,25 @@ end
 
 local function sortmenu(m)
     local v=1/2
-    
+
     for _, e in ipairs(m) do
         e.priority=(e.priority or 1)+v
         v=v/2
     end
-    
+
     table.sort(m, function(e1, e2) return e1.priority > e2.priority end)
-    
+
     return m
 end
 
 
 function menus.ctxmenu(reg, sub)
     local m, r, s
-    
+
     if obj_is(sub, "WGroup") then
         sub=(sub:bottom() or sub)
     end
-    
+
     -- First, stuff between reg (inclusive) and sub_or_chld (inclusive)
     -- at the top level in the menu.
     r=(sub or reg)
@@ -419,9 +511,9 @@ function menus.ctxmenu(reg, sub)
         s=r
         r=r:manager()
     end
-    
+
     m=(m or {})
-    
+
     -- Then stuff below reg (exclusive) as submenus
     while r do
         local mm = get_ctxmenu(r, s)
@@ -433,7 +525,7 @@ function menus.ctxmenu(reg, sub)
         s=r
         r=r:manager()
     end
-    
+
     return sortmenu(m)
 end
 

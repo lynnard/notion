@@ -1,7 +1,7 @@
 /*
  * ion/ioncore/netwm.h
  *
- * Copyright (c) Tuomo Valkonen 1999-2009. 
+ * Copyright (c) Tuomo Valkonen 1999-2009.
  *
  * See the included file LICENSE for details.
  */
@@ -33,5 +33,10 @@ extern bool netwm_handle_property(WClientWin *cwin, const XPropertyEvent *ev);
 extern void netwm_check_manage_user_time(WClientWin *cwin, WManageParams *param);
 
 extern void ioncore_screens_updated(WRootWin *rw);
+
+Atom netwm_window_type(WClientWin *cwin);
+
+/* could be constants */
+Atom netwm_window_type_get_atom_dialog();
 
 #endif /* ION_IONCORE_NETWM_H */

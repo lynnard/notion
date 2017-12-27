@@ -84,8 +84,8 @@ X11_PREFIX ?= /usr/X11R6
 # SunOS/Solaris
 #X11_PREFIX ?= /usr/openwin
 
-X11_LIBS=-L$(X11_PREFIX)/lib -lX11 -lXext
-X11_INCLUDES=-I$(X11_PREFIX)/include
+X11_LIBS=$(shell $(PKG_CONFIG) --libs x11 xext)
+X11_INCLUDES=$(shell $(PKG_CONFIG) --cflags-only-I x11 xext)
 
 # XFree86 libraries up to 4.3.0 have a bug that can cause a segfault.
 # The following setting  should  work around that situation.
@@ -100,6 +100,22 @@ DEFINES += -DCF_XFREE86_TEXTPROP_BUG_WORKAROUND
 # Remap F11 key to SunF36 and F12 to SunF37? You may want to set this
 # on SunOS.
 #DEFINES += -DCF_SUN_F1X_REMAP
+
+
+##
+## Xft support
+##
+
+USE_XFT?=$(shell (pkg-config --exists xft && echo 1))
+
+ifeq ($(USE_XFT),1)
+    X11_INCLUDES += `pkg-config xft --cflags`
+    X11_LIBS += `pkg-config xft --libs`
+    DEFINES += -DHAVE_X11_XFT
+    DEFINES += -DHAVE_X11_BMF
+else
+    DEFINES += -DHAVE_X11_BMF
+endif
 
 
 ##

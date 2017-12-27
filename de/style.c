@@ -1,7 +1,7 @@
 /*
  * ion/de/style.c
  *
- * Copyright (c) Tuomo Valkonen 1999-2009. 
+ * Copyright (c) Tuomo Valkonen 1999-2009.
  *
  * See the included file LICENSE for details.
  */
@@ -38,8 +38,8 @@ static void create_normal_gc(DEStyle *style, WRootWin *rootwin)
     gcv.fill_style=FillSolid;
     gcvmask=(GCLineStyle|GCLineWidth|GCFillStyle|
              GCJoinStyle|GCCapStyle);
-    
-    style->normal_gc=XCreateGC(ioncore_g.dpy, WROOTWIN_ROOT(rootwin), 
+
+    style->normal_gc=XCreateGC(ioncore_g.dpy, WROOTWIN_ROOT(rootwin),
                                gcvmask, &gcv);
 }
 
@@ -65,43 +65,45 @@ void destyle_create_tab_gcs(DEStyle *style)
     XSetForeground(dpy, tmp_gc, 0);
     XDrawPoint(dpy, stipple_pixmap, tmp_gc, 1, 0);
     XDrawPoint(dpy, stipple_pixmap, tmp_gc, 0, 1);
-    
+
     gcv.fill_style=FillStippled;
     /*gcv.function=GXclear;*/
     gcv.stipple=stipple_pixmap;
     gcvmask=GCFillStyle|GCStipple/*|GCFunction*/;
+#ifdef HAVE_X11_BMF
     if(style->font!=NULL && style->font->fontstruct!=NULL){
         gcv.font=style->font->fontstruct->fid;
         gcvmask|=GCFont;
     }
+#endif /* HAVE_X11_BMF */
 
     style->stipple_gc=XCreateGC(dpy, root, gcvmask, &gcv);
-    XCopyGC(dpy, style->normal_gc, 
+    XCopyGC(dpy, style->normal_gc,
             GCLineStyle|GCLineWidth|GCJoinStyle|GCCapStyle,
             style->stipple_gc);
-            
+
     XFreePixmap(dpy, stipple_pixmap);
-    
+
     /* Create tag pixmap and copying GC */
     style->tag_pixmap_w=5;
     style->tag_pixmap_h=5;
     style->tag_pixmap=XCreatePixmap(dpy, root, 5, 5, 1);
-    
+
     XSetForeground(dpy, tmp_gc, 0);
     XFillRectangle(dpy, style->tag_pixmap, tmp_gc, 0, 0, 5, 5);
     XSetForeground(dpy, tmp_gc, 1);
     XFillRectangle(dpy, style->tag_pixmap, tmp_gc, 0, 0, 5, 2);
     XFillRectangle(dpy, style->tag_pixmap, tmp_gc, 3, 2, 2, 3);
-    
+
     gcv.foreground=DE_BLACK(rootwin);
     gcv.background=DE_WHITE(rootwin);
     gcv.line_width=2;
     gcvmask=GCLineWidth|GCForeground|GCBackground;
-    
+
     style->copy_gc=XCreateGC(dpy, root, gcvmask, &gcv);
-    
+
     XFreeGC(dpy, tmp_gc);
-    
+
     style->tabbrush_data_ok=TRUE;
 }
 
@@ -119,7 +121,7 @@ DEStyle *de_get_style(WRootWin *rootwin, const GrStyleSpec *spec)
 {
     DEStyle *style, *maxstyle=NULL;
     int score, maxscore=0;
-    
+
     for(style=styles; style!=NULL; style=style->next){
         if(style->rootwin!=rootwin)
             continue;
@@ -129,7 +131,7 @@ DEStyle *de_get_style(WRootWin *rootwin, const GrStyleSpec *spec)
             maxscore=score;
         }
     }
-    
+
     return maxstyle;
 }
 
@@ -153,37 +155,37 @@ void destyle_unref(DEStyle *style)
 void destyle_deinit(DEStyle *style)
 {
     int i;
-    
+
     UNLINK_ITEM(styles, style, next, prev);
-    
+
     gr_stylespec_unalloc(&style->spec);
-    
+
     if(style->font!=NULL){
         de_free_font(style->font);
         style->font=NULL;
     }
-    
+
     if(style->cgrp_alloced)
         de_free_colour_group(style->rootwin, &(style->cgrp));
-    
+
     for(i=0; i<style->n_extra_cgrps; i++)
         de_free_colour_group(style->rootwin, style->extra_cgrps+i);
-    
+
     if(style->extra_cgrps!=NULL)
         free(style->extra_cgrps);
-    
+
     extl_unref_table(style->extras_table);
-    
+
     XFreeGC(ioncore_g.dpy, style->normal_gc);
-    
+
     if(style->tabbrush_data_ok){
         XFreeGC(ioncore_g.dpy, style->copy_gc);
         XFreeGC(ioncore_g.dpy, style->stipple_gc);
         XFreePixmap(ioncore_g.dpy, style->tag_pixmap);
     }
-    
+
     XSync(ioncore_g.dpy, False);
-    
+
     if(style->based_on!=NULL){
         destyle_unref(style->based_on);
         style->based_on=NULL;
@@ -201,17 +203,25 @@ void destyle_dump(DEStyle *style)
 
 bool destyle_init(DEStyle *style, WRootWin *rootwin, const char *name)
 {
+    DEColour black, white;
+#ifdef HAVE_X11_XFT
+    de_alloc_colour(rootwin, &black, "black");
+    de_alloc_colour(rootwin, &white, "white");
+#else
+    black=DE_BLACK(rootwin);
+    white=DE_WHITE(rootwin);
+#endif /* HAVE_X11_XFT */
     if(!gr_stylespec_load(&style->spec, name))
         return FALSE;
-    
+
     style->based_on=NULL;
-    
+
     style->usecount=1;
     /* Fallback brushes are not released on de_reset() */
     style->is_fallback=FALSE;
-    
+
     style->rootwin=rootwin;
-    
+
     style->border.sh=1;
     style->border.hl=1;
     style->border.pad=1;
@@ -219,30 +229,30 @@ bool destyle_init(DEStyle *style, WRootWin *rootwin, const char *name)
     style->border.sides=DEBORDER_ALL;
 
     style->spacing=0;
-    
+
     style->textalign=DEALIGN_CENTER;
 
     style->cgrp_alloced=FALSE;
-    style->cgrp.bg=DE_BLACK(rootwin);
-    style->cgrp.pad=DE_BLACK(rootwin);
-    style->cgrp.fg=DE_WHITE(rootwin);
-    style->cgrp.hl=DE_WHITE(rootwin);
-    style->cgrp.sh=DE_WHITE(rootwin);
+    style->cgrp.bg=black;
+    style->cgrp.pad=black;
+    style->cgrp.fg=white;
+    style->cgrp.hl=white;
+    style->cgrp.sh=white;
     gr_stylespec_init(&style->cgrp.spec);
-    
+
     style->font=NULL;
-    
+
     style->transparency_mode=GR_TRANSPARENCY_NO;
-    
+
     style->n_extra_cgrps=0;
     style->extra_cgrps=NULL;
-    
+
     style->extras_table=extl_table_none();
-    
+
     create_normal_gc(style, rootwin);
-    
+
     style->tabbrush_data_ok=FALSE;
-    
+
     return TRUE;
 }
 
