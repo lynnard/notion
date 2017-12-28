@@ -1,4 +1,4 @@
-Notion
+Notion (forked for MacOS)
 ======
 
 [![Build Status](https://travis-ci.org/raboof/notion.svg?branch=master)](https://travis-ci.org/raboof/notion)
