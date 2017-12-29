@@ -62,7 +62,7 @@ endif
 # Set PRELOAD_MODULES=1 if your system does not support dynamically loaded
 # modules through 'libdl' or has non-standard naming conventions.
 # You will likely need this option on e.g. Cygwin and Mac OS X.
-#PRELOAD_MODULES=1
+PRELOAD_MODULES=1
 
 # Flags to link with libdl. Even if PRELOAD_MODULES=1, you may need this
 # setting (for e.g. Lua, when not instructed by pkg-config).
@@ -122,14 +122,16 @@ endif
 # If you're on an archaic system (such as relatively recent *BSD releases)
 # without even dummy multibyte/widechar and localisation support, you may 
 # have to uncomment the following line:
-#DEFINES += -DCF_NO_LOCALE -DCF_NO_GETTEXT
+DEFINES += -DCF_NO_LOCALE -DCF_NO_GETTEXT
 
 # On some other systems you may need to explicitly link against libintl.
-#EXTRA_LIBS += -lintl
+# EXTRA_LIBS += -L/opt/local/lib
+# EXTRA_LIBS += -L/usr/local/Cellar/gettext/0.19.7/lib/
 # You may also need to give the location of its headers. The following
 # should work on Mac OS X (which needs the above option as well) with
 # macports.
-#EXTRA_INCLUDES += -I/opt/local/include
+# EXTRA_INCLUDES += -I/opt/local/include
+# EXTRA_INCLUDES += -I/usr/local/Cellar/gettext/0.19.7/include/
 
 
 ##
@@ -144,7 +146,7 @@ HAS_SYSTEM_ASPRINTF ?= 1
 # The following setting is needed with GNU libc for clock_gettime and the
 # monotonic clock. Other systems may not need it, or may not provide a
 # monotonic clock at all (which Ion can live with, and usually detect).
-EXTRA_LIBS += -lrt
+# EXTRA_LIBS += -lrt
 
 # Cygwin needs this. Also when you disable _BSD_SOURCE you may need it.
 #DEFINES += -DCF_NO_GETLOADAVG
@@ -168,7 +170,7 @@ WARN=-W -Wall -pedantic
 CFLAGS += -Os $(WARN) $(DEFINES) $(INCLUDES) $(EXTRA_INCLUDES) \
           -DHAS_SYSTEM_ASPRINTF=$(HAS_SYSTEM_ASPRINTF)
 
-LDFLAGS += -Wl,--as-needed $(LIBS) $(EXTRA_LIBS)
+LDFLAGS += $(LIBS) $(EXTRA_LIBS)
 EXPORT_DYNAMIC=-Xlinker --export-dynamic
 
 # The following options are mainly for development use and can be used
