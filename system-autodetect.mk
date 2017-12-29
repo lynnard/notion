@@ -4,6 +4,7 @@
 
 # Some system may have custom pkg-config executable name
 PKG_CONFIG ?= pkg-config
+export PKG_CONFIG_PATH := /opt/X11/lib/pkgconfig/:$(PKG_CONFIG_PATH)
 
 ##
 ## Installation paths
@@ -100,19 +101,6 @@ DEFINES += -DCF_XFREE86_TEXTPROP_BUG_WORKAROUND
 # Remap F11 key to SunF36 and F12 to SunF37? You may want to set this
 # on SunOS.
 #DEFINES += -DCF_SUN_F1X_REMAP
-
-
-##
-## Xft support
-##
-
-USE_XFT?=$(shell (pkg-config --exists xft && echo 1))
-
-ifeq ($(USE_XFT),1)
-    X11_INCLUDES += `pkg-config xft --cflags`
-    X11_LIBS += `pkg-config xft --libs`
-    DEFINES += -DHAVE_X11_XFT
-endif
 
 
 ##
